@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GroupVault — Shared File Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #0f0f0e;
+  --surface: #1a1a18;
+  --surface2: #222220;
+  --surface3: #2a2a27;
+  --border: #333330;
+  --border2: #444440;
+  --text: #f0ede6;
+  --text2: #9a9690;
+  --text3: #5a5752;
+  --accent: #d4a853;
+  --accent2: #b8923f;
+  --green: #4caf7d;
+  --green-bg: #1a2e22;
+  --red: #e05c5c;
+  --red-bg: #2e1a1a;
+  --blue: #5b9bd5;
+  --blue-bg: #1a2333;
+  --amber: #e0964e;
+  --amber-bg: #2e2010;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── LAYOUT ── */
+.app { display: grid; grid-template-rows: 60px 1fr; height: 100vh; }
+.header { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 16px; position: sticky; top: 0; z-index: 100; }
+.logo { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; color: var(--accent); letter-spacing: -0.5px; flex-shrink: 0; }
+.logo span { color: var(--text2); font-weight: 300; }
+.header-mid { flex: 1; display: flex; align-items: center; gap: 10px; }
+.search-wrap { position: relative; flex: 1; max-width: 360px; }
+.search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
+.search-wrap input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px 7px 34px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color .15s; }
+.search-wrap input:focus { border-color: var(--accent2); }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.user-wrap { display: flex; align-items: center; gap: 8px; }
+.user-wrap input { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; width: 130px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent2); color: var(--bg); font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.main { display: grid; grid-template-columns: 220px 1fr; overflow: hidden; }
+
+/* ── SIDEBAR ── */
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+.sidebar-label { font-size: 10px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text3); padding: 12px 10px 6px; }
+.nav-btn { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; color: var(--text2); border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; width: 100%; text-align: left; transition: background .12s, color .12s; }
+.nav-btn:hover { background: var(--surface2); color: var(--text); }
+.nav-btn.active { background: var(--surface3); color: var(--accent); }
+.nav-btn .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.nav-count { margin-left: auto; background: var(--surface3); color: var(--text2); font-size: 10px; font-family: 'DM Mono', monospace; padding: 2px 7px; border-radius: 20px; }
+.nav-count.hot { background: var(--amber-bg); color: var(--amber); }
+
+/* ── CONTENT ── */
+.content { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ── UPLOAD ZONE ── */
+.upload-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius-lg); padding: 28px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; background: var(--surface); }
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: #1f1c14; }
+.upload-zone .uz-icon { font-size: 32px; margin-bottom: 10px; }
+.upload-zone h3 { font-family: 'Fraunces', serif; font-weight: 300; font-size: 17px; color: var(--text); margin-bottom: 6px; }
+.upload-zone p { font-size: 12px; color: var(--text3); }
+#file-input { display: none; }
+.progress { height: 3px; background: var(--surface3); border-radius: 2px; overflow: hidden; display: none; margin-top: 12px; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0; transition: width .3s; }
+
+/* ── STATS ROW ── */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+.stat-card .sv { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1; }
+.stat-card .sl { font-size: 11px; color: var(--text3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.8px; }
+.stat-card.accent .sv { color: var(--accent); }
+.stat-card.green .sv { color: var(--green); }
+.stat-card.amber .sv { color: var(--amber); }
+.stat-card.red .sv { color: var(--red); }
+
+/* ── FILE TABLE ── */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.panel-title { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 300; color: var(--text); }
+.filter-tabs { display: flex; gap: 4px; }
+.tab { padding: 5px 12px; border-radius: 6px; border: 1px solid transparent; font-size: 12px; cursor: pointer; color: var(--text2); background: transparent; font-family: 'DM Sans', sans-serif; transition: all .12s; }
+.tab:hover { background: var(--surface2); color: var(--text); }
+.tab.active { background: var(--surface3); border-color: var(--border2); color: var(--accent); }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 400; }
+.tbl td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: var(--surface2); }
+.file-cell { display: flex; align-items: center; gap: 10px; }
+.file-ico { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.fname { font-size: 13px; font-weight: 500; color: var(--text); }
+.fmeta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; font-family: 'DM Mono', monospace; letter-spacing: 0.3px; }
+.badge-new { background: var(--green-bg); color: var(--green); }
+.badge-updated { background: var(--amber-bg); color: var(--amber); }
+.badge-pending { background: var(--blue-bg); color: var(--blue); }
+.badge-verified { background: var(--green-bg); color: var(--green); }
+.badge-rejected { background: var(--red-bg); color: var(--red); }
+.badge-old { background: var(--surface3); color: var(--text3); }
+.mini-av { width: 22px; height: 22px; border-radius: 50%; background: var(--accent2); color: var(--bg); font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.uploader { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+.actions { display: flex; gap: 6px; justify-content: flex-end; }
+.act-btn { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text2); transition: all .12s; font-size: 13px; }
+.act-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+.act-btn.green:hover { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+.act-btn.red:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+.act-btn.blue:hover { background: var(--blue-bg); color: var(--blue); border-color: var(--blue); }
+.empty { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 13px; }
+.empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .5; }
+
+/* ── DETAIL DRAWER ── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 200; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.overlay.open { opacity: 1; pointer-events: all; }
+.drawer { position: fixed; right: 0; top: 0; bottom: 0; width: 420px; background: var(--surface); border-left: 1px solid var(--border); z-index: 201; transform: translateX(100%); transition: transform .25s cubic-bezier(.4,0,.2,1); overflow-y: auto; display: flex; flex-direction: column; }
+.drawer.open { transform: translateX(0); }
+.drawer-header { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+.drawer-title { font-family: 'Fraunces', serif; font-weight: 300; font-size: 18px; color: var(--text); word-break: break-all; }
+.close-btn { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+.close-btn:hover { background: var(--surface2); color: var(--text); }
+.drawer-body { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+.dl { display: flex; flex-direction: column; gap: 10px; }
+.dl-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.dl-row .dk { color: var(--text3); }
+.dl-row .dv { color: var(--text); font-weight: 500; }
+.section-head { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+.verif-list { display: flex; flex-direction: column; gap: 6px; }
+.verif-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--surface2); border-radius: 8px; font-size: 12px; }
+.verif-user { display: flex; align-items: center; gap: 8px; color: var(--text); }
+.verif-status { display: flex; align-items: center; gap: 4px; font-size: 11px; font-family: 'DM Mono', monospace; }
+.verif-status.v { color: var(--green); }
+.verif-status.r { color: var(--red); }
+.verif-status.p { color: var(--blue); }
+.verify-actions { display: flex; gap: 8px; }
+.vbtn { flex: 1; padding: 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: all .12s; }
+.vbtn.approve { border-color: var(--green); color: var(--green); }
+.vbtn.approve:hover { background: var(--green-bg); }
+.vbtn.reject { border-color: var(--red); color: var(--red); }
+.vbtn.reject:hover { background: var(--red-bg); }
+.comment-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+.comment-item { background: var(--surface2); border-radius: 8px; padding: 10px 12px; }
+.comment-meta { font-size: 11px; color: var(--text3); margin-bottom: 4px; display: flex; justify-content: space-between; }
+.comment-text { font-size: 13px; color: var(--text); }
+.comment-form { display: flex; gap: 8px; }
+.comment-form input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; }
+.comment-form input:focus { border-color: var(--accent2); }
+.comment-form button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent2); background: var(--accent2); color: var(--bg); font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+.history-list { display: flex; flex-direction: column; gap: 6px; }
+.history-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; background: var(--surface2); border-radius: 8px; font-size: 12px; }
+.history-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); margin-top: 3px; flex-shrink: 0; }
+.history-text { color: var(--text); }
+.history-time { color: var(--text3); font-size: 11px; margin-top: 2px; }
+.dl-btn { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface3); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; text-align: center; transition: all .12s; }
+.dl-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── TOAST ── */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--surface3); border: 1px solid var(--border2); color: var(--text); font-size: 13px; padding: 10px 20px; border-radius: 24px; opacity: 0; transition: all .22s; z-index: 999; pointer-events: none; white-space: nowrap; font-family: 'DM Mono', monospace; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── ACTIVITY FEED ── */
+.activity-list { display: flex; flex-direction: column; }
+.activity-item { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); align-items: flex-start; }
+.activity-item:last-child { border-bottom: none; }
+.act-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.act-info { flex: 1; }
+.act-info strong { color: var(--text); font-weight: 500; }
+.act-info span { color: var(--text2); }
+.act-time { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .main { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .drawer { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">Group<span>Vault</span></div>
+    <div class="header-mid">
+      <div class="search-wrap">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="search-input" placeholder="Search files…" oninput="filterFiles()" />
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-wrap">
+        <div class="avatar" id="hdr-avatar">?</div>
+        <input type="text" id="username-input" placeholder="Your name…" maxlength="24" oninput="updateUser()" value="User" />
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="sidebar-label">Views</div>
+      <button class="nav-btn active" onclick="setView('all', this)">
+        <span class="dot" style="background:#d4a853"></span> All Files
+        <span class="nav-count" id="cnt-all">0</span>
+      </button>
+      <button class="nav-btn" onclick="setView('pending', this)">
+        <span class="dot" style="background:#5b9bd5"></span> Pending Review
+        <span class="nav-count hot" id="cnt-pending">0</span>
+      </button>
+      <button class="nav-btn" onclick="setView('verified', this)">
+        <span class="dot" style="background:#4caf7d"></span> Verified
+        <span class="nav-count" id="cnt-verified">0</span>
+      </button>
+      <button class="nav-btn" onclick="setView('rejected', this)">
+        <span class="dot" style="background:#e05c5c"></span> Rejected
+        <span class="nav-count" id="cnt-rejected">0</span>
+      </button>
+      <div class="sidebar-label">Activity</div>
+      <button class="nav-btn" onclick="setView('activity', this)">
+        <span class="dot" style="background:#9a9690"></span> Activity Log
+      </button>
+    </nav>
+
+    <!-- CONTENT -->
+    <div class="content" id="main-content">
+
+      <!-- UPLOAD -->
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="uz-icon">📂</div>
+        <h3>Drop files here or click to upload</h3>
+        <p>Any file type · Shared with the whole group · Version-tracked</p>
+        <div class="progress" id="upload-progress"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+      <input type="file" id="file-input" multiple />
+
+      <!-- STATS -->
+      <div class="stats" id="stats-row"></div>
+
+      <!-- FILE TABLE -->
+      <div class="panel" id="files-panel">
+        <div class="panel-header">
+          <span class="panel-title" id="panel-title">All Files</span>
+          <div class="filter-tabs">
+            <button class="tab active" onclick="setSort('date', this)">Recent</button>
+            <button class="tab" onclick="setSort('name', this)">Name</button>
+            <button class="tab" onclick="setSort('size', this)">Size</button>
+          </div>
+        </div>
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Status</th>
+              <th>Uploaded by</th>
+              <th>Verifications</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="file-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- ACTIVITY PANEL (hidden by default) -->
+      <div class="panel" id="activity-panel" style="display:none">
+        <div class="panel-header">
+          <span class="panel-title">Activity Log</span>
+        </div>
+        <div class="activity-list" id="activity-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY + DRAWER -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="drawer-title">File Detail</div>
+    <button class="close-btn" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'groupvault_v2';
+let state = { files: [], activity: [] };
+let currentView = 'all';
+let currentSort = 'date';
+let activeFileId = null;
+
+function load() {
+  try { const d = localStorage.getItem(STORAGE_KEY); if (d) state = JSON.parse(d); } catch(e) {}
+  if (!state.files) state.files = [];
+  if (!state.activity) state.activity = [];
+  render();
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+// ── USER ──────────────────────────────────────────────────────────────────
+let username = localStorage.getItem('gv_username') || 'User';
+document.getElementById('username-input').value = username;
+updateUser();
+
+function updateUser() {
+  username = document.getElementById('username-input').value.trim() || 'User';
+  localStorage.setItem('gv_username', username);
+  const av = document.getElementById('hdr-avatar');
+  av.textContent = initials(username);
+  av.style.background = hashColor(username);
+}
+function initials(n) { return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?'; }
+function hashColor(s) {
+  const cols = ['#b8923f','#4a8f6a','#5b7fb8','#a05888','#6a6aaa','#7a8a5a'];
+  let h=0; for(let c of s) h=(h*31+c.charCodeAt(0))%cols.length;
+  return cols[Math.abs(h)];
+}
+function timeAgo(ts) {
+  const s = Math.floor((Date.now()-ts)/1000);
+  if(s<60) return 'just now';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+function fmtSize(b) {
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+function fileIcon(name) {
+  const ext = (name.split('.').pop()||'').toLowerCase();
+  const m={pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📑',pptx:'📑',
+           jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',svg:'🖼',webp:'🖼',
+           mp4:'🎬',mov:'🎬',avi:'🎬',mp3:'🎵',wav:'🎵',
+           zip:'🗜',rar:'🗜',tar:'🗜',gz:'🗜',
+           txt:'📃',md:'📃',csv:'📋',json:'🔧',js:'🔧',py:'🔧',html:'🌐',css:'🎨'};
+  return m[ext]||'📦';
+}
+function iconBg(name) {
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  const m={pdf:'#2e1a10',doc:'#1a2333',docx:'#1a2333',xls:'#1a2e22',xlsx:'#1a2e22',
+           jpg:'#2e1a2e',jpeg:'#2e1a2e',png:'#2e1a2e',mp4:'#1e1a2e',mp3:'#1e1a2e',
+           zip:'#1a1a1a',txt:'#1a1a1a',json:'#2e2010',js:'#2e2010',py:'#1a2e22',html:'#1a2333'};
+  return m[ext]||'#222220';
+}
+
+// ── UPLOAD ────────────────────────────────────────────────────────────────
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', ()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop', e=>{ e.preventDefault(); dz.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+document.getElementById('file-input').addEventListener('change', e=>{ handleFiles(e.target.files); e.target.value=''; });
+
+function handleFiles(fileList) {
+  const arr = Array.from(fileList);
+  if(!arr.length) return;
+  const pb = document.getElementById('upload-progress');
+  const pf = document.getElementById('progress-fill');
+  pb.style.display = 'block'; pf.style.width='0';
+  let done = 0;
+  arr.forEach((f,i) => {
+    const reader = new FileReader();
+    reader.onload = e2 => {
+      const existing = state.files.find(x=>x.name===f.name);
+      const id = existing ? existing.id : 'f'+Date.now()+Math.random().toString(36).slice(2);
+      const entry = {
+        id, name:f.name, size:f.size, type:f.type,
+        uploadedAt: Date.now(), uploadedBy: username,
+        dataUrl: e2.target.result,
+        status: 'pending',
+        verifications: existing ? existing.verifications : [],
+        comments: existing ? existing.comments : [],
+        versions: existing
+          ? [...(existing.versions||[]), { uploadedAt: existing.uploadedAt, uploadedBy: existing.uploadedBy, size: existing.size, status: existing.status }]
+          : [],
+        isUpdate: !!existing
+      };
+      if(existing) { const idx=state.files.findIndex(x=>x.id===existing.id); state.files[idx]=entry; }
+      else state.files.unshift(entry);
+      addActivity(existing ? '🔄' : '⬆️', `<strong>${username}</strong> ${existing?'updated':'uploaded'} <span>${f.name}</span>`, existing?'#2e2010':'#1a2333');
+      done++;
+      pf.style.width = Math.round((done/arr.length)*100)+'%';
+      if(done===arr.length) {
+        save(); render();
+        toast(arr.length===1 ? `"${arr[0].name}" uploaded` : `${arr.length} files uploaded`);
+        setTimeout(()=>{ pb.style.display='none'; pf.style.width='0'; }, 800);
+      }
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+// ── ACTIVITY ──────────────────────────────────────────────────────────────
+function addActivity(icon, html, bg='#222220') {
+  state.activity.unshift({ icon, html, bg, ts: Date.now() });
+  if(state.activity.length > 100) state.activity.pop();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function setView(v, el) {
+  currentView = v;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  render();
+}
+function setSort(s, el) {
+  currentSort = s;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  render();
+}
+function filterFiles() { render(); }
+
+function render() {
+  renderStats();
+  renderSideCounts();
+  const isActivity = currentView === 'activity';
+  document.getElementById('files-panel').style.display = isActivity ? 'none' : 'block';
+  document.getElementById('activity-panel').style.display = isActivity ? 'block' : 'none';
+  if(isActivity) { renderActivity(); return; }
+  renderTable();
+}
+
+function renderStats() {
+  const f = state.files;
+  const pending = f.filter(x=>x.status==='pending').length;
+  const verified = f.filter(x=>x.status==='verified').length;
+  const rejected = f.filter(x=>x.status==='rejected').length;
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card accent"><div class="sv">${f.length}</div><div class="sl">Total Files</div></div>
+    <div class="stat-card amber"><div class="sv">${pending}</div><div class="sl">Pending Review</div></div>
+    <div class="stat-card green"><div class="sv">${verified}</div><div class="sl">Verified</div></div>
+    <div class="stat-card red"><div class="sv">${rejected}</div><div class="sl">Rejected</div></div>
+  `;
+}
+
+function renderSideCounts() {
+  const f = state.files;
+  document.getElementById('cnt-all').textContent = f.length;
+  const p = f.filter(x=>x.status==='pending').length;
+  document.getElementById('cnt-pending').textContent = p;
+  document.getElementById('cnt-pending').className = 'nav-count' + (p>0?' hot':'');
+  document.getElementById('cnt-verified').textContent = f.filter(x=>x.status==='verified').length;
+  document.getElementById('cnt-rejected').textContent = f.filter(x=>x.status==='rejected').length;
+}
+
+function renderTable() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  let list = state.files.filter(f => {
+    if(q && !f.name.toLowerCase().includes(q)) return false;
+    if(currentView==='pending') return f.status==='pending';
+    if(currentView==='verified') return f.status==='verified';
+    if(currentView==='rejected') return f.status==='rejected';
+    return true;
+  });
+  // sort
+  if(currentSort==='name') list.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(currentSort==='size') list.sort((a,b)=>b.size-a.size);
+  else list.sort((a,b)=>b.uploadedAt-a.uploadedAt);
+
+  const titles = { all:'All Files', pending:'Pending Review', verified:'Verified Files', rejected:'Rejected Files' };
+  document.getElementById('panel-title').textContent = titles[currentView]||'All Files';
+
+  const tbody = document.getElementById('file-tbody');
+  if(!list.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon">📭</div>No files here yet.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(f => {
+    const vCount = (f.verifications||[]).filter(v=>v.status==='approved').length;
+    const rCount = (f.verifications||[]).filter(v=>v.status==='rejected').length;
+    const myVerif = (f.verifications||[]).find(v=>v.user===username);
+    const statusBadge = {
+      pending: `<span class="badge badge-pending">⏳ Pending</span>`,
+      verified: `<span class="badge badge-verified">✓ Verified</span>`,
+      rejected: `<span class="badge badge-rejected">✗ Rejected</span>`
+    }[f.status] || '';
+    const updateBadge = f.isUpdate ? `<span class="badge badge-updated" style="margin-left:4px">↑ Updated</span>` : '';
+    return `<tr>
+      <td><div class="file-cell">
+        <div class="file-ico" style="background:${iconBg(f.name)}">${fileIcon(f.name)}</div>
+        <div>
+          <div class="fname">${esc(f.name)}</div>
+          <div class="fmeta">${fmtSize(f.size)} · ${timeAgo(f.uploadedAt)}</div>
+        </div>
+      </div></td>
+      <td>${statusBadge}${updateBadge}</td>
+      <td><div class="uploader">
+        <div class="mini-av" style="background:${hashColor(f.uploadedBy)}">${initials(f.uploadedBy)}</div>
+        ${esc(f.uploadedBy)}
+      </div></td>
+      <td><span style="font-size:12px;color:var(--text2);font-family:'DM Mono',monospace">
+        <span style="color:var(--green)">✓${vCount}</span>
+        <span style="margin:0 4px;color:var(--text3)">·</span>
+        <span style="color:var(--red)">✗${rCount}</span>
+        ${(f.comments||[]).length ? `<span style="margin:0 4px;color:var(--text3)">·</span><span style="color:var(--text3)">💬${(f.comments||[]).length}</span>` : ''}
+      </span></td>
+      <td><div class="actions">
+        ${!myVerif && f.status==='pending' ? `
+          <button class="act-btn green" title="Approve" onclick="quickVerify('${f.id}','approved');event.stopPropagation()">✓</button>
+          <button class="act-btn red" title="Reject" onclick="quickVerify('${f.id}','rejected');event.stopPropagation()">✗</button>
+        ` : ''}
+        <button class="act-btn blue" title="View Details" onclick="openDrawer('${f.id}')">🔍</button>
+        <button class="act-btn" title="Download" onclick="downloadFile('${f.id}');event.stopPropagation()">⬇</button>
+        <button class="act-btn" title="Delete" style="color:var(--text3)" onclick="deleteFile('${f.id}');event.stopPropagation()">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderActivity() {
+  const list = document.getElementById('activity-list');
+  if(!state.activity.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>No activity yet.</div>';
+    return;
+  }
+  list.innerHTML = state.activity.map(a=>`
+    <div class="activity-item">
+      <div class="act-icon" style="background:${a.bg||'#222'}">${a.icon}</div>
+      <div class="act-info">${a.html}</div>
+      <div class="act-time">${timeAgo(a.ts)}</div>
+    </div>
+  `).join('');
+}
+
+// ── QUICK VERIFY ─────────────────────────────────────────────────────────
+function quickVerify(id, status) {
+  const f = state.files.find(x=>x.id===id);
+  if(!f) return;
+  if((f.verifications||[]).find(v=>v.user===username)) { toast('You already reviewed this file'); return; }
+  if(!f.verifications) f.verifications = [];
+  f.verifications.push({ user: username, status, ts: Date.now() });
+  updateFileStatus(f);
+  addActivity(status==='approved'?'✅':'❌', `<strong>${username}</strong> ${status} <span>${f.name}</span>`, status==='approved'?'#1a2e22':'#2e1a1a');
+  save(); render();
+  toast(status==='approved' ? `Approved "${f.name}"` : `Rejected "${f.name}"`);
+}
+
+function updateFileStatus(f) {
+  const vList = f.verifications||[];
+  const approved = vList.filter(v=>v.status==='approved').length;
+  const rejected = vList.filter(v=>v.status==='rejected').length;
+  if(rejected>0) f.status='rejected';
+  else if(approved>=2) f.status='verified';
+  else f.status='pending';
+}
+
+// ── DRAWER ────────────────────────────────────────────────────────────────
+function openDrawer(id) {
+  activeFileId = id;
+  renderDrawer(id);
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+  activeFileId = null;
+}
+function renderDrawer(id) {
+  const f = state.files.find(x=>x.id===id);
+  if(!f) return;
+  document.getElementById('drawer-title').textContent = f.name;
+  const myVerif = (f.verifications||[]).find(v=>v.user===username);
+  const canVerify = !myVerif && f.status==='pending';
+  const statusBadge = { pending:'<span class="badge badge-pending">⏳ Pending</span>', verified:'<span class="badge badge-verified">✓ Verified</span>', rejected:'<span class="badge badge-rejected">✗ Rejected</span>' }[f.status]||'';
+
+  document.getElementById('drawer-body').innerHTML = `
+    <!-- Details -->
+    <div>
+      <div class="section-head">File Details</div>
+      <div class="dl">
+        <div class="dl-row"><span class="dk">Status</span><span class="dv">${statusBadge}</span></div>
+        <div class="dl-row"><span class="dk">Size</span><span class="dv">${fmtSize(f.size)}</span></div>
+        <div class="dl-row"><span class="dk">Uploaded by</span><span class="dv">${esc(f.uploadedBy)}</span></div>
+        <div class="dl-row"><span class="dk">Uploaded</span><span class="dv">${timeAgo(f.uploadedAt)}</span></div>
+        <div class="dl-row"><span class="dk">Versions</span><span class="dv">${(f.versions||[]).length+1}</span></div>
+      </div>
+    </div>
+
+    <!-- Verify -->
+    ${canVerify ? `<div>
+      <div class="section-head">Your Review</div>
+      <div class="verify-actions">
+        <button class="vbtn approve" onclick="drawerVerify('approved')">✓ Approve</button>
+        <button class="vbtn reject" onclick="drawerVerify('rejected')">✗ Reject</button>
+      </div>
+    </div>` : (myVerif ? `<div style="padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2)">You ${myVerif.status} this file ${timeAgo(myVerif.ts)}</div>` : '')}
+
+    <!-- Verifications -->
+    <div>
+      <div class="section-head">Verifications (${(f.verifications||[]).length})</div>
+      <div class="verif-list">
+        ${(f.verifications||[]).length ? (f.verifications||[]).map(v=>`
+          <div class="verif-item">
+            <div class="verif-user">
+              <div class="mini-av" style="background:${hashColor(v.user)}">${initials(v.user)}</div>
+              ${esc(v.user)}
+            </div>
+            <div class="verif-status ${v.status==='approved'?'v':'r'}">
+              ${v.status==='approved'?'✓ Approved':'✗ Rejected'} · ${timeAgo(v.ts)}
+            </div>
+          </div>`).join('') : '<div style="font-size:12px;color:var(--text3)">No verifications yet.</div>'}
+      </div>
+    </div>
+
+    <!-- Comments -->
+    <div>
+      <div class="section-head">Comments (${(f.comments||[]).length})</div>
+      <div class="comment-list" id="comment-list">
+        ${(f.comments||[]).length ? (f.comments||[]).map(c=>`
+          <div class="comment-item">
+            <div class="comment-meta"><span>${esc(c.user)}</span><span>${timeAgo(c.ts)}</span></div>
+            <div class="comment-text">${esc(c.text)}</div>
+          </div>`).join('') : '<div style="font-size:12px;color:var(--text3)">No comments yet.</div>'}
+      </div>
+      <div class="comment-form" style="margin-top:10px">
+        <input type="text" id="comment-input" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')postComment()" />
+        <button onclick="postComment()">Send</button>
+      </div>
+    </div>
+
+    <!-- History -->
+    ${(f.versions||[]).length ? `<div>
+      <div class="section-head">Version History</div>
+      <div class="history-list">
+        <div class="history-item">
+          <div class="history-dot"></div>
+          <div>
+            <div class="history-text">Current version · ${esc(f.uploadedBy)}</div>
+            <div class="history-time">${timeAgo(f.uploadedAt)} · ${fmtSize(f.size)}</div>
+          </div>
+        </div>
+        ${[...(f.versions||[])].reverse().map(v=>`
+          <div class="history-item">
+            <div class="history-dot" style="background:var(--text3)"></div>
+            <div>
+              <div class="history-text">Previous · ${esc(v.uploadedBy)}</div>
+              <div class="history-time">${timeAgo(v.uploadedAt)} · ${fmtSize(v.size)}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <!-- Download -->
+    <button class="dl-btn" onclick="downloadFile('${f.id}')">⬇ Download File</button>
+  `;
+}
+
+function drawerVerify(status) {
+  if(!activeFileId) return;
+  quickVerify(activeFileId, status);
+  renderDrawer(activeFileId);
+}
+
+function postComment() {
+  if(!activeFileId) return;
+  const inp = document.getElementById('comment-input');
+  const text = inp.value.trim();
+  if(!text) return;
+  const f = state.files.find(x=>x.id===activeFileId);
+  if(!f) return;
+  if(!f.comments) f.comments = [];
+  f.comments.push({ user: username, text, ts: Date.now() });
+  addActivity('💬', `<strong>${username}</strong> commented on <span>${f.name}</span>`, '#1a1a2e');
+  inp.value = '';
+  save(); render();
+  renderDrawer(activeFileId);
+  toast('Comment posted');
+}
+
+// ── FILE ACTIONS ──────────────────────────────────────────────────────────
+function downloadFile(id) {
+  const f = state.files.find(x=>x.id===id);
+  if(!f) return;
+  const a = document.createElement('a');
+  a.href = f.dataUrl; a.download = f.name; a.click();
+  toast(`Downloading "${f.name}"`);
+}
+
+function deleteFile(id) {
+  const f = state.files.find(x=>x.id===id);
+  if(!f) return;
+  state.files = state.files.filter(x=>x.id!==id);
+  addActivity('🗑', `<strong>${username}</strong> deleted <span>${f.name}</span>`, '#2e1a1a');
+  save(); render();
+  toast(`"${f.name}" deleted`);
+  if(activeFileId===id) closeDrawer();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+load();
+updateUser();
+</script>
+</body>
+</html>
